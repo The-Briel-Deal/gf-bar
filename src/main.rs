@@ -2,6 +2,7 @@
 
 use std::convert::TryInto;
 
+use cosmic_text::Color;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer,
@@ -58,7 +59,8 @@ fn main() {
     // interactivity
     layer.set_anchor(Anchor::BOTTOM);
     layer.set_keyboard_interactivity(KeyboardInteractivity::OnDemand);
-    layer.set_size(256, 256);
+    layer.set_size(256, 40);
+    layer.set_exclusive_zone(40);
 
     // In order for the layer surface to be mapped, we need to perform an initial commit with no attached\
     // buffer. For more info, see WaylandSurface::commit
@@ -83,7 +85,7 @@ fn main() {
         first_configure: true,
         pool,
         width: 256,
-        height: 256,
+        height: 40,
         shift: None,
         layer,
         keyboard: None,
@@ -148,6 +150,7 @@ impl CompositorHandler for SimpleLayer {
         _surface: &wl_surface::WlSurface,
         _time: u32,
     ) {
+        self.width = self.get_width() as u32;
         self.draw(qh);
     }
 
@@ -217,7 +220,7 @@ impl LayerShellHandler for SimpleLayer {
     ) {
         if configure.new_size.0 == 0 || configure.new_size.1 == 0 {
             self.width = 256;
-            self.height = 256;
+            self.height = 40;
         } else {
             self.width = configure.new_size.0;
             self.height = configure.new_size.1;
@@ -247,14 +250,19 @@ impl SeatHandler for SimpleLayer {
     ) {
         if capability == Capability::Keyboard && self.keyboard.is_none() {
             println!("Set keyboard capability");
-            let keyboard =
-                self.seat_state.get_keyboard(qh, &seat, None).expect("Failed to create keyboard");
+            let keyboard = self
+                .seat_state
+                .get_keyboard(qh, &seat, None)
+                .expect("Failed to create keyboard");
             self.keyboard = Some(keyboard);
         }
 
         if capability == Capability::Pointer && self.pointer.is_none() {
             println!("Set pointer capability");
-            let pointer = self.seat_state.get_pointer(qh, &seat).expect("Failed to create pointer");
+            let pointer = self
+                .seat_state
+                .get_pointer(qh, &seat)
+                .expect("Failed to create pointer");
             self.pointer = Some(pointer);
         }
     }
@@ -379,7 +387,11 @@ impl PointerHandler for SimpleLayer {
                 Release { button, .. } => {
                     println!("Release {:x} @ {:?}", button, event.position);
                 }
-                Axis { horizontal, vertical, .. } => {
+                Axis {
+                    horizontal,
+                    vertical,
+                    ..
+                } => {
                     println!("Scroll H:{horizontal:?}, V:{vertical:?}");
                 }
             }
@@ -394,6 +406,12 @@ impl ShmHandler for SimpleLayer {
 }
 
 impl SimpleLayer {
+    pub fn get_width(&mut self) -> i32 {
+        let first_output = self.output_state().outputs().next().unwrap();
+        let first_output_info = self.output_state().info(&first_output).unwrap();
+        let logical_size = first_output_info.logical_size.as_ref().unwrap();
+        logical_size.0
+    }
     pub fn draw(&mut self, qh: &QueueHandle<Self>) {
         let width = self.width;
         let height = self.height;
@@ -401,25 +419,30 @@ impl SimpleLayer {
 
         let (buffer, canvas) = self
             .pool
-            .create_buffer(width as i32, height as i32, stride, wl_shm::Format::Argb8888)
+            .create_buffer(
+                width as i32,
+                height as i32,
+                stride,
+                wl_shm::Format::Argb8888,
+            )
             .expect("create buffer");
 
         // Draw to the window:
         {
             let shift = self.shift.unwrap_or(0);
-            canvas.chunks_exact_mut(4).enumerate().for_each(|(index, chunk)| {
-                let x = ((index + shift as usize) % width as usize) as u32;
-                let y = (index / width as usize) as u32;
+            canvas
+                .chunks_exact_mut(4)
+                .enumerate()
+                .for_each(|(index, chunk)| {
+                    let _x = ((index + shift as usize) % width as usize) as u32;
+                    let _y = (index / width as usize) as u32;
 
-                let a = 0xFF;
-                let r = u32::min(((width - x) * 0xFF) / width, ((height - y) * 0xFF) / height);
-                let g = u32::min((x * 0xFF) / width, ((height - y) * 0xFF) / height);
-                let b = u32::min(((width - x) * 0xFF) / width, (y * 0xFF) / height);
-                let color = (a << 24) + (r << 16) + (g << 8) + b;
+                    // Tokyo Night Background Color '#1a1b26'
+                    let color = Color::rgb(0x1a, 0x1b, 0x26);
 
-                let array: &mut [u8; 4] = chunk.try_into().unwrap();
-                *array = color.to_le_bytes();
-            });
+                    let array: &mut [u8; 4] = chunk.try_into().unwrap();
+                    *array = [color.b(), color.g(), color.r(), color.a()]; // Little Endian
+                });
 
             if let Some(shift) = &mut self.shift {
                 *shift = (*shift + 1) % width;
@@ -427,13 +450,20 @@ impl SimpleLayer {
         }
 
         // Damage the entire window
-        self.layer.wl_surface().damage_buffer(0, 0, width as i32, height as i32);
+        self.layer
+            .wl_surface()
+            .damage_buffer(0, 0, width as i32, height as i32);
 
         // Request our next frame
-        self.layer.wl_surface().frame(qh, self.layer.wl_surface().clone());
+        self.layer
+            .wl_surface()
+            .frame(qh, self.layer.wl_surface().clone());
 
         // Attach and commit to present.
-        buffer.attach_to(self.layer.wl_surface()).expect("buffer attach");
+        buffer
+            .attach_to(self.layer.wl_surface())
+            .expect("buffer attach");
+        self.layer.set_size(self.width, self.height);
         self.layer.commit();
 
         // TODO save and reuse buffer when the window size is unchanged.  This is especially
