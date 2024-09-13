@@ -2,7 +2,7 @@
 
 use std::convert::TryInto;
 
-use cosmic_text::Color;
+use cosmic_text::{Attrs, Buffer, Color, FontSystem, Metrics, Shaping, SwashCache};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer,
@@ -449,6 +449,8 @@ impl SimpleLayer {
             }
         }
 
+        write_text(canvas, "hi");
+
         // Damage the entire window
         self.layer
             .wl_surface()
@@ -470,6 +472,50 @@ impl SimpleLayer {
         // useful if you do damage tracking, since you don't need to redraw the undamaged parts
         // of the canvas.
     }
+}
+
+fn write_text(canvas: &mut [u8], text: &str) {
+    const TEXT_COLOR: Color = Color::rgb(0xFF, 0xFF, 0xFF);
+    let mut font_system = FontSystem::new();
+    let mut swash_cache = SwashCache::new();
+
+    const FONT_SIZE: f32 = 14.0;
+    const LINE_HEIGHT: f32 = FONT_SIZE * 1.2;
+
+    let metrics = Metrics::new(FONT_SIZE, LINE_HEIGHT);
+    let mut buffer = Buffer::new(&mut font_system, metrics);
+
+    let mut buffer = buffer.borrow_with(&mut font_system);
+
+    let width = 100.0;
+    let height = 40.0;
+
+    buffer.set_size(Some(width), Some(height));
+
+    let attrs = Attrs::new();
+
+    buffer.set_text(text, attrs, Shaping::Advanced);
+    buffer.shape_until_scroll(true);
+
+    buffer.draw(&mut swash_cache, TEXT_COLOR, |x, y, w, h, color| {
+        let a = color.a();
+        if a == 0 || x < 0 || x >= width as i32 || y < 0 || y >= height as i32 || w != 1 || h != 1 {
+            return;
+        }
+
+        let width = 3840 * 4;
+        let line = width * y;
+        let chunk_start = (x * 4) + line;
+        if chunk_start as usize > canvas.len() - 4 {
+            return;
+        }
+        let slice: &mut [u8] = &mut canvas[chunk_start as usize..(chunk_start + 4) as usize];
+
+        slice[0] = color.b();
+        slice[1] = color.g();
+        slice[2] = color.r();
+        slice[3] = color.a();
+    })
 }
 
 delegate_compositor!(SimpleLayer);
