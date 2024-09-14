@@ -18,6 +18,9 @@ impl<'a> Canvas<'a> {
             stride: width * 4,
         }
     }
+    pub fn get_pixel(&mut self, row: u32, column: u32) -> &mut [u8] {
+        &mut self[row][column as usize * 4..((column * 4) + 1) as usize]
+    }
 }
 
 impl<'a> Index<u32> for Canvas<'a> {
@@ -37,7 +40,7 @@ impl<'a> IndexMut<u32> for Canvas<'a> {
 
 pub fn write_text(canvas: Canvas, text: &str) {
     let Canvas {
-        canvas_buffer: canvas,
+        canvas_buffer,
         height,
         width,
         stride,

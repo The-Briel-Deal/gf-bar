@@ -31,10 +31,10 @@ fn test_write_text() {
     for _i in 0..(4 * height * width) {
         canvas_buffer.push(0x00u8);
     }
-    let mut canvas = Canvas::new(&mut canvas_buffer, width, height);
+    let canvas = Canvas::new(&mut canvas_buffer, width, height);
     write_text(canvas, text);
     println!("{canvas_buffer:#X?}");
-    
+
     assert!(
         canvas_buffer == TEST_WRITE_TEXT_EXPECTED,
         "expected: \n{}\n recieved: \n{}\n ",
