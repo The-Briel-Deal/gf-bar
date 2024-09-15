@@ -1,6 +1,7 @@
-use gf_bar::text::write::{write_text, Canvas};
+use gf_bar::text::write::Canvas;
 
-use std::convert::TryInto;
+use core::time;
+use std::{convert::TryInto, time::{SystemTime, UNIX_EPOCH}};
 
 use cosmic_text::{Align, Color};
 use smithay_client_toolkit::{
@@ -449,7 +450,7 @@ impl SimpleLayer {
             }
         }
 
-        write_text(Canvas::new(canvas, width, height), "hi, I'm a dog", Align::Center);
+        Canvas::new(canvas, width, height).write_text(&get_time(), Align::Center);
 
         // Damage the entire window
         self.layer
@@ -472,6 +473,11 @@ impl SimpleLayer {
         // useful if you do damage tracking, since you don't need to redraw the undamaged parts
         // of the canvas.
     }
+}
+fn get_time() -> String {
+    let now = chrono::Local::now();
+
+    now.format("%a   %I:%M%p   %m-%d").to_string()
 }
 
 delegate_compositor!(SimpleLayer);

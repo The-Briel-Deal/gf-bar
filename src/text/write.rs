@@ -1,4 +1,4 @@
-use std::{borrow::{Borrow, BorrowMut}, ops::{Index, IndexMut}};
+use std::ops::{Index, IndexMut};
 
 use cosmic_text::{
     Align, Attrs, AttrsList, Buffer, BufferLine, Color, Family, FontSystem, LineEnding, Metrics,
@@ -59,6 +59,46 @@ impl<'a> Canvas<'a> {
         slice[1] = text_g;
         slice[0] = text_b;
     }
+
+    pub fn write_text(&mut self, text: &str, align: Align) {
+        let Canvas { width, height, .. } = *self;
+        const TEXT_COLOR: Color = Color::rgb(0xFF, 0xFF, 0xFF);
+        let mut font_system = FontSystem::new();
+        let mut swash_cache = SwashCache::new();
+
+        let font_size: f32 = height as f32 * 0.8;
+        let line_height: f32 = font_size * 1.2;
+
+        let metrics = Metrics::new(font_size, line_height);
+        let mut buffer = Buffer::new_empty(metrics);
+
+        let mut buffer = buffer.borrow_with(&mut font_system);
+
+        buffer.set_size(Some(width as f32), Some(height as f32));
+
+        let attrs = Attrs::new();
+        let attrs = attrs.family(Family::Name("JetBrainsMono Nerd Font Mono"));
+        let attrs_list = AttrsList::new(attrs);
+
+        let mut bufferline = BufferLine::new(text, LineEnding::None, attrs_list, Shaping::Advanced);
+        bufferline.set_align(Some(align));
+        buffer.lines.push(bufferline);
+        buffer.shape_until_scroll(true);
+
+        buffer.draw(&mut swash_cache, TEXT_COLOR, |x, y, w, h, color| {
+            if color.a() == 0
+                || x < 0
+                || x >= width as i32
+                || y < 0
+                || y >= height as i32
+                || w != 1
+                || h != 1
+            {
+                return;
+            }
+            self.set_pixel_color(color, x, y)
+        });
+    }
 }
 
 impl<'a> Index<u32> for Canvas<'a> {
@@ -74,46 +114,4 @@ impl<'a> IndexMut<u32> for Canvas<'a> {
         &mut self.canvas_buffer
             [(index * self.stride) as usize..((index + 1) * self.stride) as usize]
     }
-}
-
-pub fn write_text(mut canvas: Canvas, text: &str, align: Align) {
-    let Canvas { width, height, .. } = canvas;
-    const TEXT_COLOR: Color = Color::rgb(0xFF, 0xFF, 0xFF);
-    let mut font_system = FontSystem::new();
-    let mut swash_cache = SwashCache::new();
-
-    let font_size: f32 = height as f32 * 0.8;
-    let line_height: f32 = font_size * 1.2;
-
-    let metrics = Metrics::new(font_size, line_height);
-    let mut buffer = Buffer::new_empty(metrics);
-
-    let mut buffer = buffer.borrow_with(&mut font_system);
-
-    buffer.set_size(Some(width as f32), Some(height as f32));
-
-    let attrs = Attrs::new();
-    let attrs = attrs.family(Family::Name("JetBrainsMono Nerd Font Mono"));
-    let attrs_list = AttrsList::new(attrs);
-
-    let mut bufferline = BufferLine::new(text, LineEnding::None, attrs_list, Shaping::Advanced);
-    bufferline.set_align(Some(align));
-    buffer.lines.push(bufferline);
-    buffer.shape_until_scroll(true);
-
-    buffer.draw(&mut swash_cache, TEXT_COLOR, |x, y, w, h, color| {
-        println!("w = {w}, width = {width}");
-        let text_a = color.a();
-        if text_a == 0
-            || x < 0
-            || x >= width as i32
-            || y < 0
-            || y >= height as i32
-            || w != 1
-            || h != 1
-        {
-            return;
-        }
-        canvas.set_pixel_color(color, x, y)
-    });
 }
