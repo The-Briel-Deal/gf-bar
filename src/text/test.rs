@@ -32,7 +32,7 @@ fn test_write_text() {
         canvas_buffer.push(0x00u8);
     }
     let canvas = Canvas::new(&mut canvas_buffer, width, height);
-    write_text(canvas, text);
+    write_text(canvas, text, cosmic_text::Align::Left);
     println!("{canvas_buffer:#X?}");
 
     assert!(

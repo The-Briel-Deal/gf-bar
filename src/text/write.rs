@@ -1,6 +1,9 @@
-use std::ops::{Index, IndexMut};
+use std::{borrow::{Borrow, BorrowMut}, ops::{Index, IndexMut}};
 
-use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Shaping, SwashCache};
+use cosmic_text::{
+    Align, Attrs, AttrsList, Buffer, BufferLine, Color, Family, FontSystem, LineEnding, Metrics,
+    Shaping, SwashCache,
+};
 
 pub struct Canvas<'a> {
     canvas_buffer: &'a mut [u8],
@@ -73,7 +76,7 @@ impl<'a> IndexMut<u32> for Canvas<'a> {
     }
 }
 
-pub fn write_text(mut canvas: Canvas, text: &str) {
+pub fn write_text(mut canvas: Canvas, text: &str, align: Align) {
     let Canvas { width, height, .. } = canvas;
     const TEXT_COLOR: Color = Color::rgb(0xFF, 0xFF, 0xFF);
     let mut font_system = FontSystem::new();
@@ -83,7 +86,7 @@ pub fn write_text(mut canvas: Canvas, text: &str) {
     let line_height: f32 = font_size * 1.2;
 
     let metrics = Metrics::new(font_size, line_height);
-    let mut buffer = Buffer::new(&mut font_system, metrics);
+    let mut buffer = Buffer::new_empty(metrics);
 
     let mut buffer = buffer.borrow_with(&mut font_system);
 
@@ -91,8 +94,11 @@ pub fn write_text(mut canvas: Canvas, text: &str) {
 
     let attrs = Attrs::new();
     let attrs = attrs.family(Family::Name("JetBrainsMono Nerd Font Mono"));
+    let attrs_list = AttrsList::new(attrs);
 
-    buffer.set_text(text, attrs, Shaping::Advanced);
+    let mut bufferline = BufferLine::new(text, LineEnding::None, attrs_list, Shaping::Advanced);
+    bufferline.set_align(Some(align));
+    buffer.lines.push(bufferline);
     buffer.shape_until_scroll(true);
 
     buffer.draw(&mut swash_cache, TEXT_COLOR, |x, y, w, h, color| {

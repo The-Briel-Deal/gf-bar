@@ -2,7 +2,7 @@ use gf_bar::text::write::{write_text, Canvas};
 
 use std::convert::TryInto;
 
-use cosmic_text::Color;
+use cosmic_text::{Align, Color};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer,
@@ -449,7 +449,7 @@ impl SimpleLayer {
             }
         }
 
-        write_text(Canvas::new(canvas, width, height), "hi, I'm a dog");
+        write_text(Canvas::new(canvas, width, height), "hi, I'm a dog", Align::Center);
 
         // Damage the entire window
         self.layer
