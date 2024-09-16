@@ -1,7 +1,10 @@
 use gf_bar::text::write::Canvas;
 
 use core::time;
-use std::{convert::TryInto, time::{SystemTime, UNIX_EPOCH}};
+use std::{
+    convert::TryInto,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use cosmic_text::{Align, Color};
 use smithay_client_toolkit::{
@@ -428,41 +431,22 @@ impl SimpleLayer {
             )
             .expect("create buffer");
 
-        // Draw to the window:
-        {
-            let shift = self.shift.unwrap_or(0);
-            canvas
-                .chunks_exact_mut(4)
-                .enumerate()
-                .for_each(|(index, chunk)| {
-                    let _x = ((index + shift as usize) % width as usize) as u32;
-                    let _y = (index / width as usize) as u32;
+        // Tokyo Night Background Color '#1a1b26'
+        let bg_color = Color::rgba(0x1a, 0x1b, 0x26, 0xef);
+        let mut canvas = Canvas::new(canvas, width, height);
 
-                    // Tokyo Night Background Color '#1a1b26'
-                    let color = Color::rgb(0x1a, 0x1b, 0x26);
+        canvas
+            .set_background(bg_color)
+            .write_text(&get_time(), Align::Center);
 
-                    let array: &mut [u8; 4] = chunk.try_into().unwrap();
-                    *array = [color.b(), color.g(), color.r(), color.a()]; // Little Endian
-                });
-
-            if let Some(shift) = &mut self.shift {
-                *shift = (*shift + 1) % width;
-            }
-        }
-
-        Canvas::new(canvas, width, height).write_text(&get_time(), Align::Center);
-
-        // Damage the entire window
         self.layer
             .wl_surface()
             .damage_buffer(0, 0, width as i32, height as i32);
 
-        // Request our next frame
         self.layer
             .wl_surface()
             .frame(qh, self.layer.wl_surface().clone());
 
-        // Attach and commit to present.
         buffer
             .attach_to(self.layer.wl_surface())
             .expect("buffer attach");

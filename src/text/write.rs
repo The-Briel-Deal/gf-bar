@@ -60,6 +60,21 @@ impl<'a> Canvas<'a> {
         slice[0] = text_b;
     }
 
+    pub fn set_background(&mut self, color: Color) -> &mut Self {
+        self.canvas_buffer
+            .chunks_exact_mut(4)
+            .enumerate()
+            .for_each(|(index, chunk)| {
+                let _x = (index % self.width as usize) as u32;
+                let _y = (index / self.width as usize) as u32;
+
+                let array: &mut [u8; 4] = chunk.try_into().unwrap();
+                *array = [color.b(), color.g(), color.r(), color.a()]; // Little Endian
+            });
+
+        self
+    }
+
     pub fn write_text(&mut self, text: &str, align: Align) {
         let Canvas { width, height, .. } = *self;
         const TEXT_COLOR: Color = Color::rgb(0xFF, 0xFF, 0xFF);
