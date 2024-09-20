@@ -1,10 +1,5 @@
 use gf_bar::text::write::Canvas;
 
-use core::time;
-use std::{
-    convert::TryInto,
-    time::{SystemTime, UNIX_EPOCH},
-};
 
 use cosmic_text::{Align, Color};
 use smithay_client_toolkit::{

@@ -2,8 +2,6 @@ use colored::Colorize;
 
 use crate::text::write::Canvas;
 
-use super::write::write_text;
-
 fn print_canvas(canvas: &[u8], height: usize, width: usize) -> String {
     let mut output = String::from("");
     for i_h in 0..height {
@@ -31,8 +29,8 @@ fn test_write_text() {
     for _i in 0..(4 * height * width) {
         canvas_buffer.push(0x00u8);
     }
-    let canvas = Canvas::new(&mut canvas_buffer, width, height);
-    write_text(canvas, text, cosmic_text::Align::Left);
+    let mut canvas = Canvas::new(&mut canvas_buffer, width, height);
+    canvas.write_text(text, cosmic_text::Align::Left);
     println!("{canvas_buffer:#X?}");
 
     assert!(
