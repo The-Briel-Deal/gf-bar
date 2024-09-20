@@ -22,7 +22,7 @@ use smithay_client_toolkit::{
     },
     shm::{slot::SlotPool, Shm, ShmHandler},
 };
-use sysinfo::{Cpu, CpuRefreshKind, RefreshKind, System};
+use sysinfo::{CpuRefreshKind, RefreshKind, System};
 use wayland_client::{
     globals::registry_queue_init,
     protocol::{wl_keyboard, wl_output, wl_pointer, wl_seat, wl_shm, wl_surface},
