@@ -1,6 +1,5 @@
 use gf_bar::text::write::Canvas;
 
-
 use cosmic_text::{Align, Color};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
@@ -23,6 +22,7 @@ use smithay_client_toolkit::{
     },
     shm::{slot::SlotPool, Shm, ShmHandler},
 };
+use sysinfo::{Cpu, CpuRefreshKind, RefreshKind, System};
 use wayland_client::{
     globals::registry_queue_init,
     protocol::{wl_keyboard, wl_output, wl_pointer, wl_seat, wl_shm, wl_surface},
@@ -90,6 +90,10 @@ fn main() {
         keyboard: None,
         keyboard_focus: false,
         pointer: None,
+
+        system: System::new_with_specifics(
+            RefreshKind::new().with_cpu(CpuRefreshKind::everything()),
+        ),
     };
 
     // We don't draw immediately, the configure will notify us when to first draw.
@@ -119,6 +123,8 @@ struct SimpleLayer {
     keyboard: Option<wl_keyboard::WlKeyboard>,
     keyboard_focus: bool,
     pointer: Option<wl_pointer::WlPointer>,
+
+    system: System,
 }
 
 impl CompositorHandler for SimpleLayer {
@@ -430,9 +436,12 @@ impl SimpleLayer {
         let bg_color = Color::rgba(0x1a, 0x1b, 0x26, 0xef);
         let mut canvas = Canvas::new(canvas, width, height);
 
+        self.system.refresh_cpu_usage();
+
         canvas
             .set_background(bg_color)
-            .write_text(&get_time(), Align::Center);
+            .write_text(&get_time(), Align::Center)
+            .write_text(&((self.system.global_cpu_usage()).round() as i32).to_string(), Align::Right);
 
         self.layer
             .wl_surface()

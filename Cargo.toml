@@ -9,4 +9,5 @@ colored = "2.1.0"
 cosmic-text = "0.12.1"
 env_logger = "0.11.5"
 smithay-client-toolkit = "0.19.2"
+sysinfo = "0.31.4"
 wayland-client = { version = "0.31.6", features = ["log"] }

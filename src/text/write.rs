@@ -75,7 +75,7 @@ impl<'a> Canvas<'a> {
         self
     }
 
-    pub fn write_text(&mut self, text: &str, align: Align) {
+    pub fn write_text(&mut self, text: &str, align: Align) -> &mut Self {
         let Canvas { width, height, .. } = *self;
         const TEXT_COLOR: Color = Color::rgb(0xFF, 0xFF, 0xFF);
         let mut font_system = FontSystem::new();
@@ -113,6 +113,8 @@ impl<'a> Canvas<'a> {
             }
             self.set_pixel_color(color, x, y)
         });
+
+        self
     }
 }
 
