@@ -441,7 +441,10 @@ impl SimpleLayer {
         canvas
             .set_background(bg_color)
             .write_text(&get_time(), Align::Center)
-            .write_text(&((self.system.global_cpu_usage()).round() as i32).to_string(), Align::Right);
+            .write_text(
+                &format!("CPU {:.2}%",self.system.global_cpu_usage()),
+                Align::Right,
+            );
 
         self.layer
             .wl_surface()
