@@ -1,6 +1,9 @@
+use std::time::SystemTime;
+
+use chrono::TimeDelta;
 use gf_bar::text::write::Canvas;
 
-use cosmic_text::{Align, Color};
+use cosmic_text::{Align, Color, FontSystem, SwashCache};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer,
@@ -94,11 +97,25 @@ fn main() {
         system: System::new_with_specifics(
             RefreshKind::new().with_cpu(CpuRefreshKind::everything()),
         ),
+        font_system: FontSystem::new(),
+        swash_cache: SwashCache::new(),
     };
 
-    // We don't draw immediately, the configure will notify us when to first draw.
+// This isn't accurate because I'm measuring wayland messages not events.
+//    let mut frames = 0;
+//    let mut time = SystemTime::now();
+
     loop {
         event_queue.blocking_dispatch(&mut simple_layer).unwrap();
+
+//        if SystemTime::now().duration_since(time).unwrap().as_millis() >= 1000 {
+//            println!("It's been {} frames in the last sec", frames);
+//
+//            time = SystemTime::now();
+//
+//            frames = 0;
+//        };
+//        frames += 1;
 
         if simple_layer.exit {
             println!("exiting example");
@@ -125,6 +142,8 @@ struct SimpleLayer {
     pointer: Option<wl_pointer::WlPointer>,
 
     system: System,
+    font_system: FontSystem,
+    swash_cache: SwashCache,
 }
 
 impl CompositorHandler for SimpleLayer {
@@ -440,10 +459,17 @@ impl SimpleLayer {
 
         canvas
             .set_background(bg_color)
-            .write_text(&get_time(), Align::Center)
             .write_text(
-                &format!("CPU {:.2}%",self.system.global_cpu_usage()),
+                &get_time(),
+                Align::Center,
+                &mut self.font_system,
+                &mut self.swash_cache,
+            )
+            .write_text(
+                &format!("CPU {:.2}%", self.system.global_cpu_usage()),
                 Align::Right,
+                &mut self.font_system,
+                &mut self.swash_cache,
             );
 
         self.layer

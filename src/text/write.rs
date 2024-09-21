@@ -75,11 +75,15 @@ impl<'a> Canvas<'a> {
         self
     }
 
-    pub fn write_text(&mut self, text: &str, align: Align) -> &mut Self {
+    pub fn write_text(
+        &mut self,
+        text: &str,
+        align: Align,
+        font_system: &mut FontSystem,
+        swash_cache: &mut SwashCache,
+    ) -> &mut Self {
         let Canvas { width, height, .. } = *self;
         const TEXT_COLOR: Color = Color::rgb(0xFF, 0xFF, 0xFF);
-        let mut font_system = FontSystem::new();
-        let mut swash_cache = SwashCache::new();
 
         let font_size: f32 = height as f32 * 0.8;
         let line_height: f32 = font_size * 1.2;
@@ -87,7 +91,7 @@ impl<'a> Canvas<'a> {
         let metrics = Metrics::new(font_size, line_height);
         let mut buffer = Buffer::new_empty(metrics);
 
-        let mut buffer = buffer.borrow_with(&mut font_system);
+        let mut buffer = buffer.borrow_with(font_system);
 
         buffer.set_size(Some(width as f32), Some(height as f32));
 
@@ -100,7 +104,7 @@ impl<'a> Canvas<'a> {
         buffer.lines.push(bufferline);
         buffer.shape_until_scroll(true);
 
-        buffer.draw(&mut swash_cache, TEXT_COLOR, |x, y, w, h, color| {
+        buffer.draw(swash_cache, TEXT_COLOR, |x, y, w, h, color| {
             if color.a() == 0
                 || x < 0
                 || x >= width as i32
